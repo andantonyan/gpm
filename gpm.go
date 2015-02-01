@@ -9,10 +9,15 @@ import (
     "sync"
     "strings"
     "os"
+    "os/user"
 )
 
 type pachageList struct {
+    Name string
+    Description string
+    Version string
     Dependencies []string
+    Author string
 }
 
 func exe_cmd(cmd string, wg *sync.WaitGroup) {
@@ -55,7 +60,6 @@ func install_package(packageSource string) {
     wg.Wait()
 }
 
-
 func add_dependency(packageSource string) {
   	var packages pachageList
 	file, err := ioutil.ReadFile("package.json")
@@ -70,7 +74,7 @@ func add_dependency(packageSource string) {
 	}
     
     packages.Dependencies = append(packages.Dependencies, packageSource)
-    packagesByte, err := json.Marshal(packages)
+    packagesByte, err := json.MarshalIndent(packages, "", "\t")
     
     if err != nil {
 		log.Fatal(err)
@@ -94,9 +98,39 @@ func string_in_slice(a string, list []string) bool {
 }
 
 func initialization() {
+    fmt.Println("Press ^C at any time to quit.")
+    
     var packages pachageList
     
-    packagesByte, err := json.Marshal(packages)
+    packages.Name = ""
+    fmt.Printf("Name: (%v) ", packages.Name)
+    fmt.Scanln(&packages.Name)
+    
+    file, err := ioutil.ReadFile("README.md")
+    packages.Description = string(file)
+    
+    packages.Version = "1.0.0"
+    fmt.Printf("version: (%v) ", packages.Version)
+    fmt.Scanln(&packages.Version)
+    
+    usr, err := user.Current()
+    packages.Author = usr.Username
+    fmt.Printf("Author: (%v) ", packages.Author)
+    fmt.Scanln(&packages.Author)
+    
+    L1:
+        is_it_ok:= "yes"
+        fmt.Printf("Is this ok?: (%v) ", is_it_ok)
+        fmt.Scanln(&is_it_ok)
+
+        if is_it_ok == "no" {
+            fmt.Printf("Aborted\n")
+            os.Exit(0)
+        } else if is_it_ok != "no" && is_it_ok != "yes" {
+            goto L1
+        }
+
+    packagesByte, err := json.MarshalIndent(packages, "", "\t")
     
     if err != nil {
 		log.Fatal(err)
