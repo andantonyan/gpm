@@ -102,7 +102,7 @@ func initialization() {
     
     var packages pachageList
     
-    packages.Name = ""
+    packages.Name = "GoApp"
     fmt.Printf("Name: (%v) ", packages.Name)
     fmt.Scanln(&packages.Name)
     
