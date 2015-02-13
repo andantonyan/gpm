@@ -30,6 +30,9 @@ type GmmInterface interface {
 	setGoPathTmp(path string) error
 
 	execCmd(cmd string, wg *sync.WaitGroup) []byte
+	runBinary(name string)
+	checkErr(err error)
+
 	install(name string)
 	installDependencies()
 	saveDependency(name string)
@@ -43,6 +46,7 @@ type GmmInterface interface {
 }
 
 const (
+	// Colors
 	HEADER    = "\033[95m"
 	INFO      = "\033[94m"
 	SUCCESS   = "\033[92m"
@@ -51,6 +55,8 @@ const (
 	ENDC      = "\033[0m"
 	BOLD      = "\033[1m"
 	UNDERLINE = "\033[4m"
+	// Paths
+	MODULE_DIR = "go_modules"
 )
 
 func (g GMM) headerMessage(message string) {
@@ -110,6 +116,14 @@ func (g GMM) execCmd(cmd string, wg *sync.WaitGroup) []byte {
 	return out
 }
 
+func (g GMM) runBinary(name string) {
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	out := g.execCmd(g.getGoPath()+"/bin/"+name, wg)
+	g.headerMessage(string(out))
+	wg.Wait()
+}
+
 func (g GMM) install(name string) {
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
@@ -154,15 +168,18 @@ func (g GMM) init() {
 
 	var module moduleJson
 
-	module.Name = "GoApp"
+	pwd, err := os.Getwd()
+	g.checkErr(err)
+	pwdSlice := strings.Split(pwd, "/")
+	module.Name = pwdSlice[len(pwdSlice)-1]
 	g.infoMessage(" Name: (" + module.Name + ") ")
 	fmt.Scanln(&module.Name)
 
 	file, err := ioutil.ReadFile("README.md")
-	g.checkErr(err)
+	// g.checkErr(err)
 	module.Description = string(file)
 
-	module.Version = "1.0.0"
+	module.Version = "0.0.1"
 	g.infoMessage(" Version: (" + module.Version + ") ")
 	fmt.Scanln(&module.Version)
 
@@ -189,6 +206,7 @@ L1:
 
 	err = ioutil.WriteFile("module.json", moduleByte, 0644)
 	g.checkErr(err)
+	g.successMessage("Done.")
 }
 
 func main() {
