@@ -1,12 +1,24 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
 	"sync"
 )
+
+type GMM struct{}
+
+type moduleJson struct {
+	Name         string
+	Description  string
+	Version      string
+	Dependencies []string
+	Author       string
+}
 
 type GmmInterface interface {
 	getGoRoot() string
@@ -16,13 +28,13 @@ type GmmInterface interface {
 
 	execCmd(cmd string, wg *sync.WaitGroup) []byte
 	install(name string)
+	installDependencies()
+	saveDependency(name string)
 
 	successMessage(message string)
 	warningMessage(message string)
 	errorMessage(err error)
 }
-
-type GMM struct{}
 
 const (
 	HEADER    = "\033[95m"
@@ -75,6 +87,7 @@ func (g GMM) execCmd(cmd string, wg *sync.WaitGroup) []byte {
 
 	out, err := exec.Command(head, parts...).Output()
 	g.checkErr(err)
+
 	wg.Done()
 	return out
 }
@@ -84,6 +97,38 @@ func (g GMM) install(name string) {
 	wg.Add(1)
 	g.execCmd("go get "+name, wg)
 	wg.Wait()
+}
+
+func (g GMM) installDependencies() {
+	var module moduleJson
+
+	file, err := ioutil.ReadFile("module.json")
+	g.checkErr(err)
+
+	err = json.Unmarshal(file, &module)
+	g.checkErr(err)
+
+	for _, el := range module.Dependencies {
+		g.install(el)
+	}
+}
+
+func (g GMM) saveDependency(name string) {
+	var module moduleJson
+
+	file, err := ioutil.ReadFile("module.json")
+	g.checkErr(err)
+
+	err = json.Unmarshal(file, &module)
+	g.checkErr(err)
+
+	module.Dependencies = append(module.Dependencies, name)
+
+	moduleByte, err := json.MarshalIndent(module, "", "\t")
+	g.checkErr(err)
+
+	err = ioutil.WriteFile("module.json", moduleByte, 0644)
+	g.checkErr(err)
 }
 
 func main() {
