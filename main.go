@@ -21,6 +21,8 @@ type moduleJson struct {
 }
 
 type GmmInterface interface {
+	init()
+
 	getGoRoot() string
 	getGoPath() string
 
@@ -31,38 +33,48 @@ type GmmInterface interface {
 	installDependencies()
 	saveDependency(name string)
 
+	headerMessage(message string)
 	successMessage(message string)
+	infoMessage(message string)
 	warningMessage(message string)
 	errorMessage(err error)
 }
 
 const (
 	HEADER    = "\033[95m"
-	OKBLUE    = "\033[94m"
-	OKGREEN   = "\033[92m"
+	INFO      = "\033[94m"
+	SUCCESS   = "\033[92m"
 	WARNING   = "\033[93m"
-	FAIL      = "\033[91m"
+	ERROR     = "\033[91m"
 	ENDC      = "\033[0m"
 	BOLD      = "\033[1m"
 	UNDERLINE = "\033[4m"
 )
 
+func (g GMM) headerMessage(message string) {
+	fmt.Println(HEADER, message, ENDC)
+}
+
 func (g GMM) successMessage(message string) {
-	fmt.Println(OKGREEN, message, ENDC)
+	fmt.Println(SUCCESS, message, ENDC)
+}
+
+func (g GMM) infoMessage(message string) {
+	fmt.Println(INFO, message, ENDC)
 }
 
 func (g GMM) warningMessage(message string) {
-	fmt.Println(WARNING, message, ENDC)
+	fmt.Println(WARNING, "warning", message, ENDC)
 }
 
 func (g GMM) errorMessage(err error) {
-	fmt.Println(FAIL, err, ENDC)
+	fmt.Println(ERROR, "error:", err, ENDC)
 }
 
 func (g GMM) checkErr(err error) {
 	if err != nil {
 		g.errorMessage(err)
-		os.Exit(1)
+		os.Exit(0)
 	}
 }
 
@@ -130,6 +142,12 @@ func (g GMM) saveDependency(name string) {
 	err = ioutil.WriteFile("module.json", moduleByte, 0644)
 	g.checkErr(err)
 }
+
+func (g GMM) init() {
+	g.headerMessage("Press ^C at any time to quit.")
+}
+
+// done
 
 func main() {
 
