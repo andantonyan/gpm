@@ -5,36 +5,24 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	// "sync"
+	"sync"
 )
 
 type GmmInterface interface {
-	// setGoRoot()
-	// setGoPath()
-	// setGoPathLocale()
-
 	getGoRoot() string
 	getGoPath() string
-	// getGoPathLocale() string
 
-	// init()
-	// install()
-	// installDependencies()
-	// addDependency()
+	setGoPathTmp(path string) error
 
-	execCmd(cmd string)
+	execCmd(cmd string, wg *sync.WaitGroup) []byte
+	install(name string)
 
-	checkErr(err error)
-
-	warningMessage(message string)
 	successMessage(message string)
+	warningMessage(message string)
 	errorMessage(err error)
 }
 
-type GMM struct {
-	GoPath string
-	GoRoot string
-}
+type GMM struct{}
 
 const (
 	HEADER    = "\033[95m"
@@ -74,25 +62,30 @@ func (g GMM) getGoRoot() string {
 	return os.Getenv("GOROOT")
 }
 
-// done
-
-func (g GMM) execCmd(cmd string) {
-	parts := strings.Fields(cmd)
-	_, err := exec.Command(parts[0], parts[1], parts[2]).Output()
+func (g GMM) setGoPathTmp(path string) error {
+	err := os.Setenv("GOPATH", path)
 	g.checkErr(err)
+	return err
+}
+
+func (g GMM) execCmd(cmd string, wg *sync.WaitGroup) []byte {
+	parts := strings.Fields(cmd)
+	head := parts[0]
+	parts = parts[1:len(parts)]
+
+	out, err := exec.Command(head, parts...).Output()
+	g.checkErr(err)
+	wg.Done()
+	return out
+}
+
+func (g GMM) install(name string) {
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	g.execCmd("go get "+name, wg)
+	wg.Wait()
 }
 
 func main() {
-	// var gmm GmmInterface = new(GMM)
 
-	// fmt.Println(gmm.getGoRoot())
-	// fmt.Println(gmm.getGoPath())
 }
-
-// func (g GMM) execCmdWait(cmd string) {
-// 	wg := new(sync.WaitGroup)
-// 	wg.add(1)
-// 	g.execCmd(cmd)
-// 	wg.Wait()
-// 	wg.Done()
-// }
