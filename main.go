@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"os/user"
 	"strings"
 	"sync"
 )
@@ -36,6 +37,7 @@ type GmmInterface interface {
 	headerMessage(message string)
 	successMessage(message string)
 	infoMessage(message string)
+	boldMessage(message string)
 	warningMessage(message string)
 	errorMessage(err error)
 }
@@ -60,7 +62,11 @@ func (g GMM) successMessage(message string) {
 }
 
 func (g GMM) infoMessage(message string) {
-	fmt.Println(INFO, message, ENDC)
+	fmt.Print(INFO, message, ENDC)
+}
+
+func (g GMM) boldMessage(message string) {
+	fmt.Print(BOLD, message, ENDC)
 }
 
 func (g GMM) warningMessage(message string) {
@@ -145,9 +151,45 @@ func (g GMM) saveDependency(name string) {
 
 func (g GMM) init() {
 	g.headerMessage("Press ^C at any time to quit.")
-}
 
-// done
+	var module moduleJson
+
+	module.Name = "GoApp"
+	g.infoMessage(" Name: (" + module.Name + ") ")
+	fmt.Scanln(&module.Name)
+
+	file, err := ioutil.ReadFile("README.md")
+	g.checkErr(err)
+	module.Description = string(file)
+
+	module.Version = "1.0.0"
+	g.infoMessage(" Version: (" + module.Version + ") ")
+	fmt.Scanln(&module.Version)
+
+	usr, err := user.Current()
+	g.checkErr(err)
+	module.Author = usr.Username
+	g.infoMessage(" Author: (" + module.Author + ") ")
+	fmt.Scanln(&module.Author)
+
+L1:
+	isOk := "yes"
+	g.boldMessage(" Is this ok?: (" + isOk + ") ")
+	fmt.Scanln(&isOk)
+
+	if isOk == "no" {
+		g.headerMessage("Aborted")
+		os.Exit(0)
+	} else if isOk != "no" && isOk != "yes" {
+		goto L1
+	}
+
+	moduleByte, err := json.MarshalIndent(module, "", "\t")
+	g.checkErr(err)
+
+	err = ioutil.WriteFile("module.json", moduleByte, 0644)
+	g.checkErr(err)
+}
 
 func main() {
 
