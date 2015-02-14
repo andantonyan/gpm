@@ -265,23 +265,23 @@ func main() {
 		os.Exit(0)
 	}
 
-	if gmm.isInStrings("install", args) && !gmm.isInStrings("-s", args) && len(args) == 1 {
+	if gmm.isInStrings("-i", args) && !gmm.isInStrings("-s", args) && len(args) == 1 {
 		gmm.infoMessage("Installing dependencies...\n")
 		gmm.installDependencies()
 		gmm.successMessage("Done.\n")
 		os.Exit(0)
 	}
 
-	if gmm.isInStrings("install", args) && !gmm.isInStrings("-s", args) && len(args) == 2 {
-		args = gmm.removeFromSilce("install", args)
-		gmm.infoMessage("Installing " + args[0] + "...\n")
+	if gmm.isInStrings("-i", args) && !gmm.isInStrings("-s", args) && len(args) == 2 {
+		args = gmm.removeFromSilce("-i", args)
+		gmm.infoMessage("-i " + args[0] + "...\n")
 		gmm.install(args[0])
 		gmm.successMessage("Done.\n")
 		os.Exit(0)
 	}
 
-	if gmm.isInStrings("install", args) && gmm.isInStrings("-s", args) && len(args) == 3 {
-		args = gmm.removeFromSilce("install", args)
+	if gmm.isInStrings("-i", args) && gmm.isInStrings("-s", args) && len(args) == 3 {
+		args = gmm.removeFromSilce("-i", args)
 		args = gmm.removeFromSilce("-s", args)
 
 		gmm.infoMessage("Installing " + args[0] + "...\n")
@@ -291,6 +291,14 @@ func main() {
 		gmm.infoMessage("Module " + args[0] + " added in module.json.\n")
 
 		gmm.successMessage("Done.\n")
+		os.Exit(0)
+	}
+
+	args = gmm.removeFromSilce("-i", args)
+
+	if gmm.isInStrings("-b", args) {
+		args = gmm.removeFromSilce("-b", args)
+		gmm.runBinary(strings.Join(args, " "))
 		os.Exit(0)
 	}
 
