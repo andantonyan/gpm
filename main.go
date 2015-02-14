@@ -11,6 +11,21 @@ import (
 	"sync"
 )
 
+const (
+	HEADER    = "\033[95m"
+	INFO      = "\033[94m"
+	SUCCESS   = "\033[92m"
+	WARNING   = "\033[93m"
+	ERROR     = "\033[91m"
+	ENDC      = "\033[0m"
+	BOLD      = "\033[1m"
+	UNDERLINE = "\033[4m"
+
+	MODULE_DIR = ""
+
+	HELP_MESSAGE = ""
+)
+
 type GMM struct{}
 
 type moduleJson struct {
@@ -31,6 +46,8 @@ type GmmInterface interface {
 
 	execCmd(cmd string, wg *sync.WaitGroup) []byte
 	runBinary(name string)
+	isInStrings(str string, list []string) bool
+	removeFromSilce(str string, list []string) []string
 	checkErr(err error)
 
 	install(name string)
@@ -41,30 +58,17 @@ type GmmInterface interface {
 	successMessage(message string)
 	infoMessage(message string)
 	boldMessage(message string)
+	underlineMessage(message string)
 	warningMessage(message string)
 	errorMessage(err error)
 }
 
-const (
-	// Colors
-	HEADER    = "\033[95m"
-	INFO      = "\033[94m"
-	SUCCESS   = "\033[92m"
-	WARNING   = "\033[93m"
-	ERROR     = "\033[91m"
-	ENDC      = "\033[0m"
-	BOLD      = "\033[1m"
-	UNDERLINE = "\033[4m"
-	// Paths
-	MODULE_DIR = "go_modules"
-)
-
 func (g GMM) headerMessage(message string) {
-	fmt.Println(HEADER, message, ENDC)
+	fmt.Print(HEADER, message, ENDC)
 }
 
 func (g GMM) successMessage(message string) {
-	fmt.Println(SUCCESS, message, ENDC)
+	fmt.Print(SUCCESS, message, ENDC)
 }
 
 func (g GMM) infoMessage(message string) {
@@ -75,12 +79,16 @@ func (g GMM) boldMessage(message string) {
 	fmt.Print(BOLD, message, ENDC)
 }
 
+func (g GMM) underlineMessage(message string) {
+	fmt.Print(UNDERLINE, message, ENDC)
+}
+
 func (g GMM) warningMessage(message string) {
-	fmt.Println(WARNING, "warning", message, ENDC)
+	fmt.Print(WARNING, "warning:", message, ENDC)
 }
 
 func (g GMM) errorMessage(err error) {
-	fmt.Println(ERROR, "error:", err, ENDC)
+	fmt.Print("\n", ERROR, "error:", err, ENDC, "\n")
 }
 
 func (g GMM) checkErr(err error) {
@@ -120,8 +128,27 @@ func (g GMM) runBinary(name string) {
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
 	out := g.execCmd(g.getGoPath()+"/bin/"+name, wg)
-	g.headerMessage(string(out))
+	g.successMessage(string(out))
 	wg.Wait()
+}
+
+func (g GMM) isInStrings(str string, list []string) bool {
+	for _, part := range list {
+		if part == str {
+			return true
+		}
+	}
+	return false
+}
+
+func (g GMM) removeFromSilce(str string, list []string) []string {
+	s := list
+	for i, part := range list {
+		if part == str {
+			s = append(s[:i], s[i+1:]...)
+		}
+	}
+	return s
 }
 
 func (g GMM) install(name string) {
@@ -154,7 +181,9 @@ func (g GMM) saveDependency(name string) {
 	err = json.Unmarshal(file, &module)
 	g.checkErr(err)
 
-	module.Dependencies = append(module.Dependencies, name)
+	if !g.isInStrings(name, module.Dependencies) {
+		module.Dependencies = append(module.Dependencies, name)
+	}
 
 	moduleByte, err := json.MarshalIndent(module, "", "\t")
 	g.checkErr(err)
@@ -164,7 +193,7 @@ func (g GMM) saveDependency(name string) {
 }
 
 func (g GMM) init() {
-	g.headerMessage("Press ^C at any time to quit.")
+	g.headerMessage("Press ^C at any time to quit.\n")
 
 	var module moduleJson
 
@@ -172,7 +201,7 @@ func (g GMM) init() {
 	g.checkErr(err)
 	pwdSlice := strings.Split(pwd, "/")
 	module.Name = pwdSlice[len(pwdSlice)-1]
-	g.infoMessage(" Name: (" + module.Name + ") ")
+	g.infoMessage("Name: (" + module.Name + ") ")
 	fmt.Scanln(&module.Name)
 
 	file, err := ioutil.ReadFile("README.md")
@@ -180,22 +209,22 @@ func (g GMM) init() {
 	module.Description = string(file)
 
 	module.Version = "0.0.1"
-	g.infoMessage(" Version: (" + module.Version + ") ")
+	g.infoMessage("Version: (" + module.Version + ") ")
 	fmt.Scanln(&module.Version)
 
 	usr, err := user.Current()
 	g.checkErr(err)
 	module.Author = usr.Username
-	g.infoMessage(" Author: (" + module.Author + ") ")
+	g.infoMessage("Author: (" + module.Author + ") ")
 	fmt.Scanln(&module.Author)
 
 L1:
 	isOk := "yes"
-	g.boldMessage(" Is this ok?: (" + isOk + ") ")
+	g.boldMessage("Is this ok?: (" + isOk + ") ")
 	fmt.Scanln(&isOk)
 
 	if isOk == "no" {
-		g.headerMessage("Aborted")
+		g.headerMessage("\nAborted")
 		os.Exit(0)
 	} else if isOk != "no" && isOk != "yes" {
 		goto L1
@@ -206,9 +235,65 @@ L1:
 
 	err = ioutil.WriteFile("module.json", moduleByte, 0644)
 	g.checkErr(err)
-	g.successMessage("Done.")
+	g.successMessage("Done.\n")
 }
 
 func main() {
+	var gmm GmmInterface = new(GMM)
+
+	args := os.Args[1:]
+
+	if !gmm.isInStrings("-g", args) {
+		pwd, err := os.Getwd()
+		gmm.checkErr(err)
+		gmm.setGoPathTmp(pwd + MODULE_DIR)
+	}
+
+	args = gmm.removeFromSilce("-g", args)
+
+	if gmm.isInStrings("-c", args) && len(args) != 1 {
+		wg := new(sync.WaitGroup)
+		wg.Add(1)
+		out := gmm.execCmd(strings.Join(args[1:], " "), wg)
+		gmm.headerMessage("\n" + string(out) + "\n")
+		wg.Wait()
+		os.Exit(0)
+	}
+
+	if gmm.isInStrings("init", args) {
+		gmm.init()
+		os.Exit(0)
+	}
+
+	if gmm.isInStrings("install", args) && !gmm.isInStrings("-s", args) && len(args) == 1 {
+		gmm.infoMessage("Installing dependencies...\n")
+		gmm.installDependencies()
+		gmm.successMessage("Done.\n")
+		os.Exit(0)
+	}
+
+	if gmm.isInStrings("install", args) && !gmm.isInStrings("-s", args) && len(args) == 2 {
+		args = gmm.removeFromSilce("install", args)
+		gmm.infoMessage("Installing " + args[0] + "...\n")
+		gmm.install(args[0])
+		gmm.successMessage("Done.\n")
+		os.Exit(0)
+	}
+
+	if gmm.isInStrings("install", args) && gmm.isInStrings("-s", args) && len(args) == 3 {
+		args = gmm.removeFromSilce("install", args)
+		args = gmm.removeFromSilce("-s", args)
+
+		gmm.infoMessage("Installing " + args[0] + "...\n")
+		gmm.install(args[0])
+
+		gmm.saveDependency(args[0])
+		gmm.infoMessage("Module " + args[0] + " added in module.json.\n")
+
+		gmm.successMessage("Done.\n")
+		os.Exit(0)
+	}
+
+	gmm.underlineMessage(HELP_MESSAGE + "\n")
 
 }
