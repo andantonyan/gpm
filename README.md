@@ -9,5 +9,4 @@
 5. gpm -i -s <name>, install package and save 
 6. gpm -e <command>, execute installed go binary 
 7. gpm -c <command>, run system command 'ex. gpm -c go build'
-----
 
