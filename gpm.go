@@ -280,7 +280,7 @@ func main() {
 
 	if gpm.isInStrings("-i", args) && !gpm.isInStrings("-s", args) && len(args) == 2 {
 		args = gpm.removeFromSilce("-i", args)
-		gpm.infoMessage("-i " + args[0] + "...\n")
+		gpm.infoMessage("Installing package " + args[0] + "...\n")
 		gpm.install(args[0])
 		gpm.successMessage("Done.\n")
 		os.Exit(0)
@@ -294,7 +294,7 @@ func main() {
 		gpm.install(args[0])
 
 		gpm.saveDependency(args[0])
-		gpm.infoMessage("Module " + args[0] + " added in package.json.\n")
+		gpm.infoMessage("Package " + args[0] + " added in package.json.\n")
 
 		gpm.successMessage("Done.\n")
 		os.Exit(0)
