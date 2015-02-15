@@ -108,7 +108,13 @@ func (g GPM) checkErr(err error) {
 }
 
 func (g GPM) getGoPath() string {
-	return os.Getenv("GOPATH")
+	path := os.Getenv("GOPATH")
+
+	if len(path) > 0 && path[len(path)-1] == '/' {
+		path = path[:len(path)-1]
+	}
+
+	return path
 }
 
 func (g GPM) getGoRoot() string {
