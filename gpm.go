@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -51,7 +52,9 @@ type GmmInterface interface {
 	setGoPathTmp(path string) error
 
 	execCmd(cmd string, wg *sync.WaitGroup) []byte
+	execCmdAsync(cmd string)
 	runBinary(name string)
+	runBinaryAsync(name string)
 	isInStrings(str string, list []string) bool
 	removeFromSilce(str string, list []string) []string
 	checkErr(err error)
@@ -94,7 +97,7 @@ func (g GPM) warningMessage(message string) {
 }
 
 func (g GPM) errorMessage(err error) {
-	fmt.Print("\n", ERROR, "error: ", err, ENDC, "\n")
+	fmt.Print(ERROR, "error: ", err, ENDC, "\n")
 }
 
 func (g GPM) checkErr(err error) {
@@ -130,12 +133,37 @@ func (g GPM) execCmd(cmd string, wg *sync.WaitGroup) []byte {
 	return out
 }
 
+func (g GPM) execCmdAsync(cmd string) {
+	parts := strings.Fields(cmd)
+	head := parts[0]
+	parts = parts[1:len(parts)]
+
+	command := exec.Command(head, parts...)
+
+	stdout, err := command.StdoutPipe()
+	g.checkErr(err)
+	stderr, err := command.StderrPipe()
+	g.checkErr(err)
+
+	err = command.Start()
+	g.checkErr(err)
+
+	defer command.Wait()
+
+	go io.Copy(os.Stdout, stdout)
+	go io.Copy(os.Stderr, stderr)
+}
+
 func (g GPM) runBinary(name string) {
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
 	out := g.execCmd(g.getGoPath()+"/bin/"+name, wg)
 	g.successMessage(string(out))
 	wg.Wait()
+}
+
+func (g GPM) runBinaryAsync(name string) {
+	g.execCmdAsync(g.getGoPath() + "/bin/" + name)
 }
 
 func (g GPM) isInStrings(str string, list []string) bool {
@@ -158,10 +186,7 @@ func (g GPM) removeFromSilce(str string, list []string) []string {
 }
 
 func (g GPM) install(name string) {
-	wg := new(sync.WaitGroup)
-	wg.Add(1)
-	g.execCmd("go get "+name, wg)
-	wg.Wait()
+	g.execCmdAsync("go get " + name)
 }
 
 func (g GPM) installDependencies() {
@@ -258,11 +283,7 @@ func main() {
 	args = gpm.removeFromSilce("-g", args)
 
 	if gpm.isInStrings("-c", args) && len(args) != 1 {
-		wg := new(sync.WaitGroup)
-		wg.Add(1)
-		out := gpm.execCmd(strings.Join(args[1:], " "), wg)
-		gpm.headerMessage(string(out))
-		wg.Wait()
+		gpm.execCmdAsync(strings.Join(args[1:], " "))
 		os.Exit(0)
 	}
 
@@ -304,7 +325,7 @@ func main() {
 
 	if gpm.isInStrings("-e", args) {
 		args = gpm.removeFromSilce("-e", args)
-		gpm.runBinary(strings.Join(args, " "))
+		gpm.runBinaryAsync(strings.Join(args, " "))
 		os.Exit(0)
 	}
 
