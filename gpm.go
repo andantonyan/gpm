@@ -43,7 +43,7 @@ type packageJson struct {
 	Author       string
 }
 
-type GmmInterface interface {
+type GpmInterface interface {
 	init()
 
 	getGoRoot() string
@@ -276,7 +276,7 @@ L1:
 }
 
 func main() {
-	var gpm GmmInterface = new(GPM)
+	var gpm GpmInterface = new(GPM)
 
 	args := os.Args[1:]
 
