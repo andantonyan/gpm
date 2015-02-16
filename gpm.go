@@ -31,6 +31,8 @@ const (
 		"gpm -i -s <name>, install package and save \n" +
 		"gpm -e <command>, execute installed go binary \n" +
 		"gpm -c <command>, run system command 'ex. gpm -c go build'"
+
+	GPM_VERSION = "0.0.2"
 )
 
 type GPM struct{}
@@ -48,6 +50,7 @@ type GpmInterface interface {
 
 	getGoRoot() string
 	getGoPath() string
+	getVersion() string
 
 	setGoPathTmp(path string) error
 
@@ -119,6 +122,14 @@ func (g GPM) getGoPath() string {
 
 func (g GPM) getGoRoot() string {
 	return os.Getenv("GOROOT")
+}
+
+func (g GPM) getVersion() string {
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	goVersion := g.execCmd("go version", wg)
+	wg.Wait()
+	return "gpm version " + GPM_VERSION + "\n" + string(goVersion)
 }
 
 func (g GPM) setGoPathTmp(path string) error {
@@ -332,6 +343,12 @@ func main() {
 	if gpm.isInStrings("-e", args) {
 		args = gpm.removeFromSilce("-e", args)
 		gpm.runBinaryAsync(strings.Join(args, " "))
+		os.Exit(0)
+	}
+
+	if gpm.isInStrings("-v", args) {
+		args = gpm.removeFromSilce("-v", args)
+		gpm.infoMessage(gpm.getVersion())
 		os.Exit(0)
 	}
 
