@@ -26,6 +26,7 @@ const (
 
 	HELP_MESSAGE = "gpm init, initialization \n" +
 		"gpm -g, use system GOPATH \n" +
+		"gpm -v, show version \n" +
 		"gpm -i, install dependencies \n" +
 		"gpm -i <name>, install package \n" +
 		"gpm -i -s <name>, install package and save \n" +
